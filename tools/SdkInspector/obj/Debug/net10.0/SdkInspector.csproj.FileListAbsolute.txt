@@ -1,0 +1,14 @@
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\bin\Debug\net10.0\SdkInspector.exe
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\bin\Debug\net10.0\SdkInspector.deps.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\bin\Debug\net10.0\SdkInspector.runtimeconfig.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\bin\Debug\net10.0\SdkInspector.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\bin\Debug\net10.0\SdkInspector.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\SdkInspector.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\SdkInspector.AssemblyInfoInputs.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\SdkInspector.AssemblyInfo.cs
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\SdkInspector.csproj.CoreCompileInputs.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\SdkInspector.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\refint\SdkInspector.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\SdkInspector.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\SdkInspector.genruntimeconfig.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\SdkInspector\obj\Debug\net10.0\ref\SdkInspector.dll

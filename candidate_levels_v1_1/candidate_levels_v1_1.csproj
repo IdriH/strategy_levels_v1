@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../Quantower.local.props" Condition="Exists('../Quantower.local.props')" />
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Platforms>AnyCPU</Platforms>
+    <AlgoType>Indicator</AlgoType>
+    <AssemblyName>candidate_levels_v1_1</AssemblyName>
+    <RootNamespace>NqCandidateLevels</RootNamespace>
+    <QuantowerSdkPath Condition="'$(QuantowerSdkPath)'==''">$(QUANTOWER_SDK_PATH)</QuantowerSdkPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>C:\Quantower\TradingPlatform\v1.146.18\..\..\Settings\Scripts\Indicators\candidate_levels_v1_1</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>C:\Quantower\TradingPlatform\v1.146.18\..\..\Settings\Scripts\Indicators\candidate_levels_v1_1</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NqCandidateLevels.Core/NqCandidateLevels.Core.csproj" />
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>C:\Quantower\TradingPlatform\v1.146.18\bin\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <Target Name="CheckQuantowerSdk" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(QuantowerSdkPath)/TradingPlatform.BusinessLayer.dll')" Text="Installed Quantower SDK not found. Run tools/Find-Quantower.ps1 or pass -p:QuantowerSdkPath=&quot;the detected version/bin directory&quot;." />
+  </Target>
+</Project>

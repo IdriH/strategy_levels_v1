@@ -1,0 +1,14 @@
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\bin\Debug\net10.0\OptionalInspector.exe
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\bin\Debug\net10.0\OptionalInspector.deps.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\bin\Debug\net10.0\OptionalInspector.runtimeconfig.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\bin\Debug\net10.0\OptionalInspector.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\bin\Debug\net10.0\OptionalInspector.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.AssemblyInfoInputs.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.AssemblyInfo.cs
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.csproj.CoreCompileInputs.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\refint\OptionalInspector.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.genruntimeconfig.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\ref\OptionalInspector.dll

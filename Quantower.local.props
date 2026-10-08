@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <QuantowerSdkPath Condition="'$(QuantowerSdkPath)'==''">C:\Quantower\TradingPlatform\v1.146.18\bin</QuantowerSdkPath>
+    <QuantowerRoot Condition="'$(QuantowerRoot)'==''">C:\Quantower</QuantowerRoot>
+  </PropertyGroup>
+</Project>

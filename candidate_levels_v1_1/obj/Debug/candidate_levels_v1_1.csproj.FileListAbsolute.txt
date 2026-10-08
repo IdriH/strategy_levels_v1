@@ -1,0 +1,15 @@
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.csproj.AssemblyReference.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.AssemblyInfoInputs.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.AssemblyInfo.cs
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.csproj.CoreCompileInputs.cache
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\bin\Debug\candidate_levels_v1_1.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\bin\Debug\candidate_levels_v1_1.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\bin\Debug\NqCandidateLevels.Core.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\bin\Debug\NqCandidateLevels.Core.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidat.1E24769A.Up2Date
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\refint\candidate_levels_v1_1.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\ref\candidate_levels_v1_1.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\bin\Debug\candidate_levels_v1_1.deps.json

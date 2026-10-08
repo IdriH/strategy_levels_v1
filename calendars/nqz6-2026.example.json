@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "description": "Optional NQZ6 session overrides. This verified expiration example describes the NQZ6 source, not a Nasdaq cash-market closure. Built-in holiday uncertainty remains until every affected trade date is explicitly verified. See docs/calendar.md.",
+  "sessions": [
+    {
+      "tradingDate": "2026-12-18",
+      "verified": true,
+      "source": "CME rulebook 35902.G and 35903.A https://www.cmegroup.com/content/dam/cmegroup/rulebook/CME/IV/350/359/359.pdf ; Nasdaq regular opening https://www.nasdaq.com/market-activity/stock-market-holiday-schedule ; reviewed 2026-10-07",
+      "futuresClosed": false,
+      "futuresIntervalsChicago": [
+        {
+          "start": "2026-12-17T17:00:00",
+          "end": "2026-12-18T08:30:00"
+        }
+      ],
+      "cashClosed": true,
+      "cashNewYork": null
+    }
+  ]
+}

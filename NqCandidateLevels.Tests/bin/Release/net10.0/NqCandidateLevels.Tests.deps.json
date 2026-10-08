@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "NqCandidateLevels.Tests/1.0.0": {
+        "dependencies": {
+          "NqCandidateLevels.Core": "1.0.0"
+        },
+        "runtime": {
+          "NqCandidateLevels.Tests.dll": {}
+        }
+      },
+      "NqCandidateLevels.Core/1.0.0": {
+        "runtime": {
+          "NqCandidateLevels.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "NqCandidateLevels.Tests/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "NqCandidateLevels.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -1,0 +1,22 @@
+<Project>
+  <!-- Quantower Algo's Visual Studio extension may rewrite the .csproj output/reference paths.
+       This late import keeps CLI/solution builds portable and leaves deployment to the installer. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)'=='candidate_levels_v1_1'">
+    <QuantowerSdkPath Condition="'$(QUANTOWER_SDK_PATH)'!=''">$(QUANTOWER_SDK_PATH)</QuantowerSdkPath>
+    <OutputPath>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutputPath>
+    <OutDir>$(OutputPath)</OutDir>
+    <!-- The SDK computes these before Directory.Build.targets is imported.
+         Reset derived paths too when the Algo extension supplied an installation path. -->
+    <TargetDir>$(OutDir)</TargetDir>
+    <TargetPath>$(TargetDir)$(TargetFileName)</TargetPath>
+    <ProjectDepsFilePath>$(TargetDir)$(AssemblyName).deps.json</ProjectDepsFilePath>
+    <ProjectRuntimeConfigFilePath>$(TargetDir)$(AssemblyName).runtimeconfig.json</ProjectRuntimeConfigFilePath>
+    <ProjectRuntimeConfigDevFilePath>$(TargetDir)$(AssemblyName).runtimeconfig.dev.json</ProjectRuntimeConfigDevFilePath>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)'=='candidate_levels_v1_1'">
+    <Reference Update="TradingPlatform.BusinessLayer">
+      <HintPath>$(QuantowerSdkPath)/TradingPlatform.BusinessLayer.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
