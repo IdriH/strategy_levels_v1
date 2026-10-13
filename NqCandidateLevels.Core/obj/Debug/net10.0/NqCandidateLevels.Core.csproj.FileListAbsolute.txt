@@ -9,4 +9,7 @@ C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Deb
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Debug\net10.0\refint\NqCandidateLevels.Core.dll
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Debug\net10.0\NqCandidateLevels.Core.pdb
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Debug\net10.0\ref\NqCandidateLevels.Core.dll
-C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Debug\net10.0\NqCandid.FD7B7825.Up2Date
+C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Debug\net10.0\NqCandidateLevels.Core.sourcelink.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\.tmp\build-check\NqCandidateLevels.Core.deps.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\.tmp\build-check\NqCandidateLevels.Core.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\.tmp\build-check\NqCandidateLevels.Core.pdb

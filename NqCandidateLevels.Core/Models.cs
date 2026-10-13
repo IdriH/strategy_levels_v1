@@ -15,6 +15,7 @@ public sealed record SourceIdentity(string ConnectionId, string ContractId, stri
 public enum ManualBias { Both, BuyOnly, SellOnly, NoTrade }
 public enum MechanicalSide { BreakoutBuy, BreakdownSell, AtLevel }
 public enum LevelFamily { PreviousRth, PreviousFutures, Overnight, CurrentWeek, PreviousWeek, CurrentRth, OpeningRange, Structure, VolumeProfile, Options }
+public enum ReferenceKind { Unknown, High, Low, Open, Close, VwapProxy, SwingHigh, SwingLow, Poc, Hvn, Lvn, OptionConcentration, OptionActivity, OptionContext }
 
 [Flags]
 public enum QualityFlags
@@ -52,6 +53,9 @@ public sealed record CandidateLevel
     public string ConnectionId { get; init; } = "";
     public string ContractId { get; init; } = "";
     public LevelFamily Family { get; init; }
+    public ReferenceKind Kind { get; init; }
+    /// <summary>Observed source event, shared by aliases such as a session high and a confirmed swing high.</summary>
+    public string OriginatingEventId { get; init; } = "";
     public string Label { get; init; } = "";
     public double RawPrice { get; init; }
     public double DisplayPrice { get; init; }
@@ -65,12 +69,27 @@ public sealed record CandidateLevel
     public bool Developing { get; init; }
     public bool Frozen { get; init; }
     public bool Inactive { get; init; }
+    /// <summary>Explicit adapter evidence validity, separate from source health and manual eligibility.</summary>
+    public bool EvidenceAvailable { get; init; } = true;
     public MechanicalSide Side { get; init; }
     public bool ManualPermission { get; init; }
     public QualityFlags Quality { get; init; }
     public string Provenance { get; init; } = "Independent NQZ6 completed M1 Last bars";
     public ProfilePoint? Profile { get; init; }
     public OptionStrike? Option { get; init; }
+    public OptionConcentration? OptionConcentration { get; init; }
+
+    public CandidateLevel Freeze() => this with
+    {
+        Profile = Profile?.Freeze(),
+        Option = Option is null ? null : Option with
+        {
+            Contracts = Array.AsReadOnly(Option.Contracts.ToArray()),
+            Concentrations = Array.AsReadOnly(Option.Concentrations.Select(x => x.Freeze()).ToArray()),
+            StrongestConcentration = Option.StrongestConcentration?.Freeze()
+        },
+        OptionConcentration = OptionConcentration?.Freeze()
+    };
 }
 
 public sealed record RenderLevel(double DisplayPrice, IReadOnlyList<CandidateLevel> References)
@@ -87,7 +106,11 @@ public sealed record LevelSnapshot(
     DateTime? LastSourceUpdateUtc, double? LatestSourcePrice, bool SourceActive,
     ManualBias Bias, IReadOnlyList<CandidateLevel> References,
     IReadOnlyList<CandidateLevel> ActiveCandidates, IReadOnlyList<RenderLevel> Rendering,
-    IReadOnlyDictionary<string, string> ProviderStatus);
+    IReadOnlyDictionary<string, string> ProviderStatus)
+{
+    public OptionConcentrationResult? OptionAnalysis { get; init; }
+    public IReadOnlyList<OptionContract> OptionContracts { get; init; } = Array.Empty<OptionContract>();
+}
 
 public static class SnapshotBuilder
 {
@@ -108,11 +131,10 @@ public static class SnapshotBuilder
                 MechanicalSide.BreakdownSell => bias is ManualBias.Both or ManualBias.SellOnly,
                 _ => false
             };
-            return x with { SnapshotVersion = version, ConnectionId = source.ConnectionId, ContractId = source.ContractId,
+            return x.Freeze() with { SnapshotVersion = version, ConnectionId = source.ConnectionId, ContractId = source.ContractId,
                 DisplayPrice = NormalizePrice(x.RawPrice, source.TickSize), Side = side, ManualPermission = permission,
-                Inactive = x.Inactive || !sourceActive || !sourcePrice.HasValue, ComputedAtUtc = computedAtUtc,
-                Quality = sourceActive ? x.Quality : x.Quality | QualityFlags.Stale,
-                Option = x.Option is null ? null : x.Option with { Contracts = Array.AsReadOnly(x.Option.Contracts.ToArray()) } };
+                Inactive = x.Inactive || !sourceActive || !sourcePrice.HasValue || x.Kind == ReferenceKind.OptionContext, ComputedAtUtc = computedAtUtc,
+                Quality = sourceActive ? x.Quality : x.Quality | QualityFlags.Stale };
         }).OrderBy(x => x.DisplayPrice).ThenBy(x => x.Id, StringComparer.Ordinal).ToArray();
         var render = materialized.GroupBy(x => PriceTick(x.DisplayPrice, source.TickSize))
             .Select(g => new RenderLevel(g.First().DisplayPrice, Array.AsReadOnly(g.ToArray()))).ToArray();

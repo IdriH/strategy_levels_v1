@@ -16,3 +16,4 @@ C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Tests\obj\De
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Tests\obj\Debug\net10.0\NqCandidateLevels.Tests.pdb
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Tests\obj\Debug\net10.0\NqCandidateLevels.Tests.genruntimeconfig.cache
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Tests\obj\Debug\net10.0\ref\NqCandidateLevels.Tests.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Tests\obj\Debug\net10.0\NqCandidateLevels.Tests.sourcelink.json

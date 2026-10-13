@@ -9,7 +9,14 @@ using TradingPlatform.BusinessLayer.Integration;
 
 namespace NqCandidateLevels;
 
-public sealed record OptionsProviderSettings(int SeriesLimit = 2, int StrikesEachSide = 5, int TimeoutSeconds = 30);
+public sealed record OptionsProviderSettings(int SeriesLimit = 8, int StrikesEachSide = 3, int TimeoutSeconds = 90)
+{
+    public double BandHalfWidth { get; init; } = 500;
+    // In-band option symbols are attached in bounded batches so the feed delivers their OI.
+    // Each batch is released before the next opens; the request deadline bounds the whole scan.
+    public int HydrationBatchSize { get; init; } = 128;
+    public TimeSpan HydrationBatchWait { get; init; } = TimeSpan.FromSeconds(3);
+}
 public sealed record ProfileProviderSettings(ProfileSettings Geometry, int TimeoutSeconds = 60);
 
 public sealed record OptionsProviderSnapshot(
@@ -23,6 +30,12 @@ public sealed record OptionsProviderSnapshot(
     // Pure selection can follow source-price changes without new metadata requests.
     public IReadOnlyList<OptionContract> VerifiedContracts { get; init; } = Array.Empty<OptionContract>();
     public string CompatibilityStatus { get; init; } = "";
+    public double ScanCenter { get; init; }
+    public double ScanHalfWidth { get; init; } = 500;
+    public IReadOnlyList<string> ScannedSeriesIds { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> UnqueriedSeriesIds { get; init; } = Array.Empty<string>();
+    public bool KnownEntitlementTruncated { get; init; }
+    public string HydrationStatus { get; init; } = "no option subscriptions";
 }
 
 public sealed record ProfileProviderSnapshot(
@@ -41,7 +54,8 @@ public sealed record ProfileProviderSnapshot(
 
 /// <summary>
 /// Bounded, independently sourced optional requests. The adapter owns refresh/cache policy;
-/// these workers own and dispose only the histories they create. No option subscriptions.
+/// these workers own and dispose only the histories and option handlers they create. Option
+/// symbols inside the analysis band are attached in bounded batches only while a request runs.
 /// </summary>
 public static class OptionalProviders
 {
@@ -49,10 +63,13 @@ public static class OptionalProviders
         Symbol source, SourceIdentity identity, double sourcePrice, DateTime asOfUtc,
         OptionsProviderSettings settings, CancellationToken token)
     {
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
             using var bounded = CancellationTokenSource.CreateLinkedTokenSource(token);
-            bounded.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(settings.TimeoutSeconds, 5, 120)));
+            var timeout = TimeSpan.FromSeconds(Math.Clamp(settings.TimeoutSeconds, 5, 120));
+            bounded.CancelAfter(timeout);
+            // Leave room to apply partial hydration before the whole request times out.
+            var hydrationDeadlineUtc = DateTime.UtcNow + timeout - TimeSpan.FromSeconds(2);
             var requestToken = bounded.Token;
             var observedUtc = DateTime.UtcNow;
             try
@@ -80,26 +97,22 @@ public static class OptionalProviders
                 var metadataAsOfUtc = DateTime.UtcNow;
                 var underlying = new UnderlyingVerifier(source, identity, requestToken);
                 var seriesLimit = Math.Clamp(settings.SeriesLimit, 1, 8);
-                var observationDate = DateOnly.FromDateTime(metadataAsOfUtc);
                 var candidates = allSeries
                     .Where(s => s != null && !string.IsNullOrWhiteSpace(s.Id) && s.ConnectionId == identity.ConnectionId &&
                         underlying.ResolveId(s.UnderlierId) == OptionUnderlyingEvidence.MatchesSource)
                     .Where(s => ValidExpiry(s.ExpirationDate))
-                    .GroupBy(s => s.Id, StringComparer.Ordinal).Select(g => g.First())
                     .OrderBy(s => SdkUtc(s.ExpirationDate)).ThenBy(s => s.Id, StringComparer.Ordinal)
                     .ToArray();
-                // Today's calendar-only series can obtain a real cutoff from a matching
-                // returned strike. Query them separately so an unknown/expired cutoff
-                // cannot crowd the nearest configured future series out of the request.
-                var series = candidates.Where(s => SdkUtc(s.ExpirationDate) > metadataAsOfUtc).Take(seriesLimit)
-                    .Concat(candidates.Where(s => s.ExpirationDate.TimeOfDay == TimeSpan.Zero &&
-                        DateOnly.FromDateTime(s.ExpirationDate) == observationDate).Take(8))
-                    .DistinctBy(s => s.Id, StringComparer.Ordinal)
-                    .OrderBy(s => SdkUtc(s.ExpirationDate)).ThenBy(s => s.Id, StringComparer.Ordinal).ToArray();
+                // Same-day date-only probes consume the same bounded scan budget.
+                // Exact contract validation still refuses an unresolved same-day cutoff.
+                var universe = OptionUniverseSelection.Select(candidates.Select(s => SeriesMetadata(s, underlying)),
+                    identity, metadataAsOfUtc, seriesLimit);
+                var selectedIds = universe.SelectedSeries.Select(s => s.SeriesId).ToHashSet(StringComparer.Ordinal);
+                var series = candidates.Where(s => selectedIds.Contains(s.Id)).DistinctBy(s => s.Id, StringComparer.Ordinal).ToArray();
                 if (series.Length == 0)
                     return OptionsUnavailable(identity, DateTime.UtcNow, asOfUtc, "options unavailable: no unexpired series with verified NQZ6 underlying/connection");
 
-                var contracts = new List<OptionContract>();
+                var rows = new List<(OptionContract Contract, Symbol Symbol)>();
                 var rejected = 0;
                 var rejectionReasons = new Dictionary<string, int>(StringComparer.Ordinal);
                 var inheritedUnderlying = 0;
@@ -137,26 +150,33 @@ public static class OptionalProviders
                         // Cached positive fields are supplied values; zero/default values without a
                         // field-validity indicator remain unknown. Retrieval is an observation time,
                         // not a quote time or an OI publication time. No publication clock exists here.
-                        contracts.Add(new OptionContract(
+                        var metricObservedUtc = DateTime.UtcNow;
+                        var oiValue = PositiveSuppliedValue(option.OpenInterest);
+                        var volumeValue = option.VolumeType == SymbolVolumeType.Volume ? PositiveSuppliedValue(option.Volume) : null;
+                        rows.Add((new OptionContract(
                             option.Id, identity.ConnectionId, identity.ContractId, serie.Id,
                             compatibility.ExpiryUtc!.Value, option.StrikePrice,
                             option.OptionType == OptionType.Call ? OptionRight.Call : OptionRight.Put,
-                            PositiveSuppliedValue(option.OpenInterest),
-                            option.VolumeType == SymbolVolumeType.Volume ? PositiveSuppliedValue(option.Volume) : null,
-                            DateTime.UtcNow, null));
+                            oiValue, volumeValue, metricObservedUtc, null)
+                        {
+                            OpenInterestMetric = new(oiValue, oiValue.HasValue ? OptionMetricAvailability.CachedValue : OptionMetricAvailability.Unknown, metricObservedUtc),
+                            VolumeMetric = new(volumeValue, volumeValue.HasValue ? OptionMetricAvailability.CachedValue : OptionMetricAvailability.Unknown, metricObservedUtc)
+                        }, option));
                     }
                 }
                 requestToken.ThrowIfCancellationRequested();
+                var scanHalfWidth = Math.Clamp(settings.BandHalfWidth, 1, 2000);
+                // Unsubscribed option symbols keep default fields, which the scorer treats as unknown
+                // (0% bucket coverage). Attach the analysis band briefly so the feed can deliver OI.
+                var (contracts, hydrationStatus) = await OptionBandHydration.HydrateAsync(rows, sourcePrice, scanHalfWidth,
+                    settings.HydrationBatchSize, settings.HydrationBatchWait, hydrationDeadlineUtc - DateTime.UtcNow,
+                    requestToken).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
                 observedUtc = DateTime.UtcNow;
-                var selection = OptionSelection.Select(contracts, identity, sourcePrice, observedUtc,
-                    Math.Clamp(settings.SeriesLimit, 1, 8), Math.Clamp(settings.StrikesEachSide, 1, 50));
-                var chosen = selection.Strikes.SelectMany(s => s.Contracts).ToArray();
-                var oiCount = chosen.Count(c => c.OpenInterest.HasValue);
-                var volumeCount = chosen.Count(c => c.TradedVolume.HasValue);
-                var status = chosen.Length == 0
-                    ? selection.Status
-                    : $"options NQZ6 verified: {selection.IncludedSeriesCount} series / {selection.Strikes.Count} strikes; " +
-                      $"OI {oiCount}/{chosen.Length}, volume {volumeCount}/{chosen.Length}; publication times unavailable";
+                // Selection/normalization belongs to the adapter's cached pure analysis.
+                var status = $"options NQZ6 verified: {series.Length}/{candidates.Length} series scanned, {contracts.Length} contracts; " +
+                    $"{universe.UnqueriedSeries.Count} unqueried; cached OI publication unknown; volume session unverified; {hydrationStatus}";
+                var selection = new OptionSelectionResult(status, series.Length, Array.Empty<OptionStrike>());
                 var diagnostics = new List<string>();
                 if (inheritedUnderlying != 0) diagnostics.Add($"{inheritedUnderlying} underlying identities verified by requested series");
                 if (inheritedExpiry != 0) diagnostics.Add($"{inheritedExpiry} expiries verified by matching series");
@@ -166,8 +186,13 @@ public static class OptionalProviders
                 if (compatibilityStatus.Length != 0) status += "; " + compatibilityStatus;
                 return new OptionsProviderSnapshot(identity, observedUtc, asOfUtc, selection, status)
                 {
-                    VerifiedContracts = Array.AsReadOnly(contracts.ToArray()),
-                    CompatibilityStatus = compatibilityStatus
+                    VerifiedContracts = Array.AsReadOnly(contracts),
+                    CompatibilityStatus = compatibilityStatus,
+                    HydrationStatus = hydrationStatus,
+                    ScanCenter = sourcePrice,
+                    ScanHalfWidth = scanHalfWidth,
+                    ScannedSeriesIds = Array.AsReadOnly(series.Select(s => s.Id).ToArray()),
+                    UnqueriedSeriesIds = Array.AsReadOnly(universe.UnqueriedSeries.Select(s => s.SeriesId).ToArray())
                 };
             }
             catch (OperationCanceledException) when (!token.IsCancellationRequested)

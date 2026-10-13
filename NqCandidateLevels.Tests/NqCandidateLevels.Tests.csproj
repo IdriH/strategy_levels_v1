@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../NqCandidateLevels.Core/NqCandidateLevels.Core.csproj" />
+    <Compile Include="../candidate_levels_v1_1/OptionSymbolMetrics.cs" Link="OptionSymbolMetrics.cs" />
   </ItemGroup>
 </Project>

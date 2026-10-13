@@ -31,9 +31,14 @@ public sealed class NqZ6CandidateLevelsIndicator : Indicator
     [InputParameter("Profile local neighborhood (bins)", 62, 1, 20, 1, 0)] public int ProfileNeighborhood = 1;
     [InputParameter("Maximum HVNs and LVNs each", 63, 1, 10, 1, 0)] public int ProfileNodeLimit = 3;
     [InputParameter("Verified NQZ6 option strikes", 70)] public bool OptionStrikes = true;
-    [InputParameter("Nearest unexpired option series", 71, 1, 8, 1, 0)] public int OptionSeries = 2;
-    [InputParameter("Distinct strikes on each side", 72, 1, 50, 1, 0)] public int StrikesEachSide = 5;
+    [InputParameter("Option series scan budget", 71, 1, 8, 1, 0)] public int OptionSeries = 8;
+    [InputParameter("Selected concentration strikes per side", 72, 1, 50, 1, 0)] public int StrikesEachSide = 3;
     [InputParameter("Options metadata refresh (seconds)", 73, 30, 1800, 30, 0)] public int OptionRefreshSeconds = 120;
+    [InputParameter("Options cache TTL (seconds)", 74, 30, 3600, 30, 0)] public int OptionCacheTtlSeconds = 300;
+    [InputParameter("Options minimum band half-width (points)", 75, 1, 2000, 25, 0)] public int OptionBandHalfWidth = 500;
+    [InputParameter("Options raw concentration threshold", 76, .01, 1, .01, 2)] public double OptionThreshold = .65;
+    [InputParameter("Options minimum valid buckets", 77, 3, 1000, 1, 0)] public int OptionMinimumBuckets = 10;
+    [InputParameter("Options minimum returned-bucket coverage", 78, .01, 1, .01, 2)] public double OptionMinimumCoverage = .70;
     [InputParameter("At-level tolerance (NQ ticks)", 80, 0, 2, .25, 2)] public double AtLevelToleranceTicks = .5;
     [InputParameter("Eligible buy color", 81)] public Color BuyColor = Color.LimeGreen;
     [InputParameter("Eligible sell color", 82)] public Color SellColor = Color.OrangeRed;
@@ -44,6 +49,20 @@ public sealed class NqZ6CandidateLevelsIndicator : Indicator
     [InputParameter("Right-edge labels", 87)] public bool ShowLabels = true;
     [InputParameter("Level table rows", 88, 5, 100, 1, 0)] public int TableRows = 24;
     [InputParameter("Detailed provider health", 90)] public bool DetailedHealth = true;
+    [InputParameter("Importance zone width (NQ ticks)", 100, 0, 40, 1, 0)] public int ZoneToleranceTicks = 8;
+    [InputParameter("Minimum displayed importance", 101, 0, 100, 1, 0)] public double MinimumScore = 0;
+    [InputParameter("Minimum displayed tier", 102)] public ImportanceTier MinimumTier = ImportanceTier.D;
+    [InputParameter("Maximum displayed zones per side", 103, 1, 30, 1, 0)] public int ZonesEachSide = 6;
+    [InputParameter("Maximum watch zones", 104, 0, 10, 1, 0)] public int WatchZones = 3;
+    [InputParameter("Show score components", 105)] public bool ComponentDetails = false;
+    [InputParameter("Subtle zone fill", 106)] public bool FillZones = true;
+    [InputParameter("Base component maximum", 110, 0, 100, 1, 0)] public double BaseWeight = 40;
+    [InputParameter("Confluence component maximum", 111, 0, 100, 1, 0)] public double ConfluenceWeight = 25;
+    [InputParameter("Options component maximum", 112, 0, 100, 1, 0)] public double OptionsWeight = 25;
+    [InputParameter("Profile component maximum", 113, 0, 100, 1, 0)] public double ProfileWeight = 10;
+    [InputParameter("Critical A threshold", 114, 0, 100, 1, 0)] public double CriticalThreshold = 75;
+    [InputParameter("Major B threshold", 115, 0, 100, 1, 0)] public double MajorThreshold = 50;
+    [InputParameter("Secondary C threshold", 116, 0, 100, 1, 0)] public double SecondaryThreshold = 35;
 
     private SourceDataAdapter? adapter;
     private AdapterView view = new(null, "initializing NQZ6", "options pending", "volume profile disabled", "", "history pending");
@@ -53,11 +72,12 @@ public sealed class NqZ6CandidateLevelsIndicator : Indicator
 
     /// <summary>Immutable source snapshot for a future scorer; includes unfiltered References and separate ActiveCandidates.</summary>
     public LevelSnapshot? CurrentSnapshot => Volatile.Read(ref view).Snapshot;
+    public ScoredLevelSnapshot? CurrentScoredSnapshot => Volatile.Read(ref view).ScoredSnapshot;
 
     public NqZ6CandidateLevelsIndicator()
     {
         Name = "NQZ6 Candidate Levels";
-        Description = "Independent Rithmic NQZ6 candidate references, mechanical geometry and manual permissions; no orders or scoring.";
+        Description = "Independent NQZ6 references with deterministic importance-v1 ranking and manual permissions; no orders.";
         SeparateWindow = false;
         AllowFitAuto = false;
     }
@@ -72,13 +92,24 @@ public sealed class NqZ6CandidateLevelsIndicator : Indicator
             {
                 var bucket = item.SortIndex / 10;
                 var text = bucket switch { 0 => "Manual permissions", 1 => "Independent Rithmic source", 2 => "Session calendar (exchange time zones)",
-                    3 => "Price level families", 4 => "Opening range", 5 => "Confirmed structure", 6 => "True volume profile", 7 => "NQZ6 options", 8 => "Rendering", _ => "Diagnostics" };
+                    3 => "Price level families", 4 => "Opening range", 5 => "Confirmed structure", 6 => "True volume profile", 7 => "NQZ6 options", 8 => "Rendering", 10 => "Reference importance", 11 => "Importance hypotheses / weights", _ => "Diagnostics" };
                 if (!groups.TryGetValue(bucket, out var group)) groups[bucket] = group = new(text, bucket);
                 item.SeparatorGroup = group;
             }
             return result;
         }
-        set => base.Settings = value;
+        set
+        {
+            // Keep saved numerical budgets: the old strike count remains a display count.
+            // Renaming the SDK setting keys explicitly migrates old workspaces.
+            var migrated = value.Select(item => item.GetCopy()).ToList();
+            foreach (var item in migrated)
+            {
+                if (item.Name == "Nearest unexpired option series") item.Name = "Option series scan budget";
+                if (item.Name == "Distinct strikes on each side") item.Name = "Selected concentration strikes per side";
+            }
+            base.Settings = migrated;
+        }
     }
 
     protected override void OnInit() => Restart();
@@ -100,10 +131,32 @@ public sealed class NqZ6CandidateLevelsIndicator : Indicator
         var requested = new AdapterSettings(RithmicConnectionId, SourceContractId, CalendarPath, engineSettings, Bias, OptionStrikes,
             Math.Clamp(OptionSeries, 1, 8), Math.Clamp(StrikesEachSide, 1, 50), Math.Clamp(OptionRefreshSeconds, 30, 1800),
             VolumeProfile, Math.Clamp(ProfileBinTicks, 1, 40), Math.Clamp(ProfileNeighborhood, 1, 20),
-            Math.Clamp(ProfileNodeLimit, 1, 10), Math.Clamp(StaleSeconds, 15, 600));
-        if (adapter != null && activeSettings != null && requested with { Bias = activeSettings.Bias } == activeSettings)
+            Math.Clamp(ProfileNodeLimit, 1, 10), Math.Clamp(StaleSeconds, 15, 600))
         {
-            adapter.SetBias(Bias);
+            Scoring = new ScoringSettings { ZoneToleranceTicks = Math.Clamp(ZoneToleranceTicks, 0, 40),
+                AtLevelToleranceTicks = Math.Clamp(AtLevelToleranceTicks, 0, 2),
+                BaseMaximum = Math.Clamp(BaseWeight, 0, 100), ConfluenceMaximum = Math.Clamp(ConfluenceWeight, 0, 100),
+                OptionsMaximum = Math.Clamp(OptionsWeight, 0, 100), ProfileMaximum = Math.Clamp(ProfileWeight, 0, 100),
+                SecondaryThreshold = Math.Clamp(SecondaryThreshold, 0, 100),
+                MajorThreshold = Math.Clamp(MajorThreshold, Math.Clamp(SecondaryThreshold, 0, 100), 100),
+                CriticalThreshold = Math.Clamp(CriticalThreshold, Math.Max(Math.Clamp(SecondaryThreshold, 0, 100), Math.Clamp(MajorThreshold, 0, 100)), 100),
+                OptionRetrievalTtlSeconds = Math.Clamp(OptionCacheTtlSeconds, 30, 3600) },
+            OptionConcentration = new OptionConcentrationSettings
+            {
+                SelectedStrikesEachSide = Math.Clamp(StrikesEachSide, 1, 50),
+                CacheTtlSeconds = Math.Clamp(OptionCacheTtlSeconds, 30, 3600),
+                MinimumBandHalfWidth = Math.Clamp(OptionBandHalfWidth, 1, 2000),
+                RawConcentrationThreshold = Math.Clamp(OptionThreshold, .01, 1),
+                MinimumValidBuckets = Math.Clamp(OptionMinimumBuckets, 3, 1000),
+                MinimumCoverage = Math.Clamp(OptionMinimumCoverage, .01, 1)
+            }
+        };
+        if (adapter != null && activeSettings != null && requested with { Bias = activeSettings.Bias,
+            Scoring = activeSettings.Scoring, OptionConcentration = activeSettings.OptionConcentration,
+            StrikesEachSide = activeSettings.StrikesEachSide } == activeSettings)
+        {
+            adapter.UpdateScoringAndBias(requested.Scoring, Bias, requested.OptionConcentration);
+            activeSettings = requested;
             try { CurrentChart?.RedrawBuffer(); } catch (InvalidOperationException) { }
             return;
         }
@@ -136,6 +189,8 @@ public sealed class NqZ6CandidateLevelsIndicator : Indicator
         base.OnPaintChart(args);
         CandidateRenderer.Paint(args, CurrentChart, Symbol?.Id, Symbol?.ConnectionId, Volatile.Read(ref view),
             new(BuyColor, SellColor, ContextColor, Math.Clamp(RayWidth, 1, 4), Math.Clamp(FontSize, 7, 16),
-                ShowContext, ShowLabels, Math.Clamp(TableRows, 5, 100), DetailedHealth, Bias));
+                ShowContext, ShowLabels, Math.Clamp(TableRows, 5, 100), DetailedHealth, Bias,
+                Math.Clamp(MinimumScore, 0, 100), MinimumTier, Math.Clamp(ZonesEachSide, 1, 30),
+                Math.Clamp(WatchZones, 0, 10), ComponentDetails, FillZones));
     }
 }

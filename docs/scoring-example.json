@@ -1,0 +1,21 @@
+{
+  "ExampleOnly": true,
+  "ScoringVersion": "importance-v1",
+  "SourceSnapshotVersion": 42,
+  "AsOfUtc": "2026-10-12T15:00:00Z",
+  "KnownAtUtc": "2026-10-12T15:00:00.100Z",
+  "Source": { "Name": "NQZ6", "TickSize": 0.25 },
+  "Bias": "Both",
+  "Zones": [{
+    "LowPrice": 25750.0,
+    "HighPrice": 25751.0,
+    "AnchorPrice": 25750.0,
+    "Side": "BreakoutBuy",
+    "ManualPermission": true,
+    "Tier": "A",
+    "Score": { "Base": 38, "Confluence": 18, "Options": 20, "Profile": 8, "Total": 84 },
+    "EvidenceGroups": ["SessionExtremes", "AuctionReferences", "OptionsConcentration"],
+    "EvidenceIds": ["synthetic-pdh", "synthetic-independent-poc", "synthetic-oi-peak"],
+    "OptionEvidence": { "Mode": "OpenInterestOnly", "RawConcentration": 1, "EffectiveConcentration": 0.8, "OpenInterestCoverage": 1, "OpenInterestValidBuckets": 12, "OpenInterestPublicationUnknown": true }
+  }]
+}

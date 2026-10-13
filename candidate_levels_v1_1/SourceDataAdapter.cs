@@ -7,10 +7,17 @@ namespace NqCandidateLevels;
 internal sealed record AdapterSettings(string ConnectionId, string ContractId, string CalendarPath,
     EngineSettings Engine, ManualBias Bias, bool Options, int OptionSeries, int StrikesEachSide,
     int OptionRefreshSeconds, bool Profile, int ProfileBinTicks, int ProfileNeighborhood,
-    int ProfileDisplayLimit, int StaleSeconds);
+    int ProfileDisplayLimit, int StaleSeconds)
+{
+    public ScoringSettings Scoring { get; init; } = new();
+    public OptionConcentrationSettings OptionConcentration { get; init; } = new();
+}
 
 internal sealed record AdapterView(LevelSnapshot? Snapshot, string Health, string Options, string Profile,
-    string Connection, string Coverage, string Error = "");
+    string Connection, string Coverage, string Error = "")
+{
+    public ScoredLevelSnapshot? ScoredSnapshot { get; init; }
+}
 
 /// <summary>Each instance owns one independent Last/M1 history, its handlers, and cancelable workers.</summary>
 internal sealed class SourceDataAdapter : IDisposable
@@ -52,10 +59,16 @@ internal sealed class SourceDataAdapter : IDisposable
     private string optionsStatus = "options awaiting verified NQZ6 source";
     private string profileStatus = "volume profile disabled";
     private string lastHealth = "";
-    private OptionSelectionResult? selectedOptions;
+    private OptionConcentrationResult? selectedOptions;
+    private OptionConcentrationResult? optionsAnalysis;
+    private volatile ScoringSettings scoringSettings;
+    private volatile OptionConcentrationSettings concentrationSettings;
+    private OptionConcentrationSettings? analyzedSettings;
+    private DateOnly analyzedDate;
+    private DateTime analysisExpiryUtc;
+    private LevelSnapshot? lastRawSnapshot;
     private OptionsProviderSnapshot? selectedOptionsFrom;
     private double? selectedOptionsPrice;
-    private DateTime selectedOptionsMinute;
     private string coverage = "loading independent NQZ6 Last/M1 history";
     private int barCount;
     private DateTime? firstBarUtc;
@@ -65,6 +78,8 @@ internal sealed class SourceDataAdapter : IDisposable
     {
         this.settings = settings;
         bias = settings.Bias;
+        scoringSettings = settings.Scoring;
+        concentrationSettings = settings.OptionConcentration;
         this.publish = publish;
         timer = new System.Threading.Timer(_ => _ = PumpAsync(), null, 0, 500);
     }
@@ -128,12 +143,21 @@ internal sealed class SourceDataAdapter : IDisposable
                 nextRetryUtc = now.AddSeconds(5);
             }
             StartOptionalRequests(asOf, now);
-            SelectCachedOptions(asOf);
+            SelectCachedOptions(asOf, now);
             var statuses = new Dictionary<string, string> { ["Options"] = optionsStatus, ["VolumeProfile"] = profileStatus };
             // Engine providers are cached by data revision. Quote geometry is refreshed without rescanning history.
-            var snapshot = engine.ComputeSnapshot(asOf, now, bias, active, health, OptionalReferences(asOf), statuses);
+            var snapshot = engine.ComputeSnapshot(asOf, now, bias, active, health, OptionalReferences(asOf, now), statuses) with
+            {
+                OptionAnalysis = selectedOptions,
+                OptionContracts = Volatile.Read(ref optionsResult)?.VerifiedContracts ?? Array.Empty<OptionContract>()
+            };
+            lastRawSnapshot = snapshot;
             if (changed.Count > 0 || version != seenTickVersion || health != lastHealth || optionalDirty || now.Second % 5 == 0)
-                publish(new(snapshot, health, optionsStatus, profileStatus, $"{source.Connection.Name} [{source.Connection.Id}]", coverage));
+            {
+                var scored = LevelScoring.Build(snapshot, scoringSettings);
+                publish(new(snapshot, health, optionsStatus, profileStatus, $"{source.Connection.Name} [{source.Connection.Id}]", coverage)
+                    { ScoredSnapshot = scored });
+            }
             optionalDirty = false;
             seenTickVersion = version;
             lastHealth = health;
@@ -253,12 +277,14 @@ internal sealed class SourceDataAdapter : IDisposable
         if (settings.Options && latestPrice is double price && now >= nextOptionsUtc && Interlocked.CompareExchange(ref optionBusy, 1, 0) == 0)
         {
             nextOptionsUtc = now.AddSeconds(settings.OptionRefreshSeconds);
+            var halfWidth = ScanHalfWidth();
             _ = Task.Run(async () =>
             {
                 try
                 {
                     var result = await OptionalProviders.GetOptionsAsync(captured.Symbol, captured.Identity, price, asOf,
-                        new(settings.OptionSeries, settings.StrikesEachSide), requestToken).ConfigureAwait(false);
+                        new OptionsProviderSettings(settings.OptionSeries, concentrationSettings.SelectedStrikesEachSide)
+                            { BandHalfWidth = halfWidth }, requestToken).ConfigureAwait(false);
                     if (!disposed && currentEpoch == Interlocked.Read(ref epoch))
                     { Volatile.Write(ref optionsResult, result); optionsStatus = result.Status; optionalDirty = true; }
                 }
@@ -302,24 +328,38 @@ internal sealed class SourceDataAdapter : IDisposable
         });
     }
 
-    private IEnumerable<CandidateLevel> OptionalReferences(DateTime asOf)
+    private IEnumerable<CandidateLevel> OptionalReferences(DateTime asOf, DateTime now)
     {
         var identity = source?.Identity;
         var options = Volatile.Read(ref optionsResult);
         if (settings.Options && options != null && options.Source == identity)
         {
-            foreach (var strike in selectedOptions?.Strikes ?? Array.Empty<OptionStrike>())
+            foreach (var strike in selectedOptions?.SelectedStrikes ?? Array.Empty<OptionStrike>())
+            {
+                var concentration = strike.StrongestConcentration;
+                var measured = concentration?.IsEligible == true;
+                var staleOption = (now - options.ObservedUtc).TotalSeconds > concentrationSettings.CacheTtlSeconds ||
+                    concentration != null && (now > concentration.ValidUntilUtc || now >= concentration.ExpiryUtc);
+                if (concentration != null && staleOption)
+                    concentration = concentration with { IsEligible = false, EffectiveConcentration = 0,
+                        RejectionReasons = Array.AsReadOnly(concentration.RejectionReasons.Append("stale adapter retrieval clock").ToArray()) };
                 yield return new CandidateLevel
                 {
                     Id = $"option:{SnapshotBuilder.PriceTick(strike.Strike, identity!.TickSize)}", Family = LevelFamily.Options,
-                    Label = $"Option strike ({strike.Contracts.Count} contracts)", RawPrice = strike.Strike,
+                    Kind = !measured ? ReferenceKind.OptionContext : concentration!.IsOpenInterestBacked
+                        ? ReferenceKind.OptionConcentration : ReferenceKind.OptionActivity,
+                    Label = measured ? concentration!.IsOpenInterestBacked ? "OPT(OI)" : "OPT(activity)" : "OPT(unranked context)",
+                    RawPrice = strike.Strike,
                     TradingDate = calendar!.GetTradingDate(options.ObservedUtc), IntervalStartUtc = options.ObservedUtc,
                     IntervalEndUtc = strike.Contracts.Max(c => c.ExpiryUtc), OriginUtc = options.ObservedUtc,
                     KnownAtUtc = options.ObservedUtc, LastUpdateUtc = options.ObservedUtc, Frozen = true,
-                    Quality = QualityFlags.VerifiedUnderlying, Option = strike,
-                    Inactive = DateTime.UtcNow - options.ObservedUtc > TimeSpan.FromSeconds(settings.OptionRefreshSeconds * 2),
+                    Quality = QualityFlags.VerifiedUnderlying | (staleOption ? QualityFlags.Stale : QualityFlags.None),
+                    Option = strike, OptionConcentration = concentration,
+                    Inactive = !measured || staleOption,
+                    EvidenceAvailable = !staleOption,
                     Provenance = "Rithmic chain metadata; exact NQZ6 underlying and connection verified; retrieval observation, OI publication clock unknown"
                 };
+            }
         }
         var profile = Volatile.Read(ref profileResult);
         if (settings.Profile && profile != null && profile.Source == identity && profile.Profile.Available && profile.StartUtc == profileSession)
@@ -330,6 +370,7 @@ internal sealed class SourceDataAdapter : IDisposable
                     Id = point.Kind == ProfileLevelKind.Poc ? $"profile:{profile.StartUtc:yyyyMMdd}:Poc" :
                         $"profile:{profile.StartUtc:yyyyMMdd}:{point.Kind}:{SnapshotBuilder.PriceTick(point.Price, identity!.TickSize)}",
                     Family = LevelFamily.VolumeProfile, Label = $"RTH {point.Kind.ToString().ToUpperInvariant()}", RawPrice = point.Price,
+                    Kind = point.Kind switch { ProfileLevelKind.Poc => ReferenceKind.Poc, ProfileLevelKind.Hvn => ReferenceKind.Hvn, _ => ReferenceKind.Lvn },
                     TradingDate = calendar!.GetTradingDate(profile.StartUtc), IntervalStartUtc = profile.StartUtc,
                     IntervalEndUtc = profile.EndUtc, OriginUtc = profile.EndUtc, KnownAtUtc = profile.ObservedUtc,
                     LastUpdateUtc = profile.ObservedUtc, Frozen = true, Profile = point,
@@ -339,29 +380,58 @@ internal sealed class SourceDataAdapter : IDisposable
         }
     }
 
-    private void SelectCachedOptions(DateTime asOf)
+    private double ScanHalfWidth()
+    {
+        var cfg = concentrationSettings;
+        var previous = lastRawSnapshot?.References.Where(x => x.Family == LevelFamily.PreviousRth).ToArray();
+        var high = previous?.FirstOrDefault(x => x.Kind == ReferenceKind.High);
+        var low = previous?.FirstOrDefault(x => x.Kind == ReferenceKind.Low);
+        var range = high != null && low != null ? Math.Max(0, high.RawPrice - low.RawPrice) : 0;
+        return Math.Min(cfg.MaximumBandHalfWidth, Math.Max(cfg.MinimumBandHalfWidth, cfg.PreviousRthRangeMultiplier * range));
+    }
+
+    private void SelectCachedOptions(DateTime asOf, DateTime now)
     {
         var cached = Volatile.Read(ref optionsResult);
         if (!settings.Options || cached == null || source == null || latestPrice is not double price || cached.Source != source.Identity)
         { selectedOptions = null; return; }
-        var minute = new DateTime(asOf.Ticks - asOf.Ticks % TimeSpan.TicksPerMinute, DateTimeKind.Utc);
-        if (ReferenceEquals(cached, selectedOptionsFrom) && selectedOptionsPrice == price && selectedOptionsMinute == minute &&
-            (selectedOptions != null || cached.ObservedUtc > asOf)) return;
-        selectedOptionsFrom = cached; selectedOptionsPrice = price; selectedOptionsMinute = minute;
         if (cached.ObservedUtc > asOf)
         { selectedOptions = null; optionsStatus = "options snapshot awaits next NQZ6 observation (no backdating)"; return; }
-        selectedOptions = OptionSelection.Select(cached.VerifiedContracts, source.Identity, price, asOf,
-            settings.OptionSeries, settings.StrikesEachSide);
-        if (cached.VerifiedContracts.Count == 0) { optionsStatus = cached.Status; return; }
-        var contracts = selectedOptions.Strikes.SelectMany(s => s.Contracts).ToArray();
-        if (contracts.Length == 0)
+        var cfg = concentrationSettings;
+        var analysisChanged = !ReferenceEquals(cached, selectedOptionsFrom) || optionsAnalysis == null ||
+            analyzedSettings != cfg || analyzedDate != DateOnly.FromDateTime(asOf) || asOf >= analysisExpiryUtc;
+        if (analysisChanged)
         {
-            optionsStatus = selectedOptions.Status;
-            if (cached.CompatibilityStatus.Length != 0) optionsStatus += "; " + cached.CompatibilityStatus;
-            return;
+            // Analyze a fixed retrieval band once per observation/settings/expiry change.
+            optionsAnalysis = NqCandidateLevels.Core.OptionConcentration.Analyze(cached.VerifiedContracts, source.Identity,
+                cached.ScanCenter, asOf, cfg with { MinimumBandHalfWidth = Math.Max(cfg.MinimumBandHalfWidth,
+                    Math.Min(cfg.MaximumBandHalfWidth, cached.ScanHalfWidth)) }, calendar: calendar,
+                knownEntitlementTruncated: cached.KnownEntitlementTruncated) with
+            {
+                ScannedSeriesCount = cached.ScannedSeriesIds.Count,
+                ScannedSeriesIds = cached.ScannedSeriesIds,
+                UnqueriedSeriesIds = cached.UnqueriedSeriesIds
+            };
+            selectedOptionsFrom = cached; analyzedSettings = cfg; analyzedDate = DateOnly.FromDateTime(asOf);
+            analysisExpiryUtc = cached.VerifiedContracts.SelectMany(c => new[]
+                {
+                    c.ExpiryUtc, c.ExpiryUtc.AddDays(-7), c.ExpiryUtc.AddDays(-30),
+                    (c.ObservedUtc ?? cached.ObservedUtc).AddSeconds(cfg.CacheTtlSeconds).AddTicks(1),
+                    (c.OpenInterestMetric?.ObservedUtc ?? c.ObservedUtc ?? cached.ObservedUtc).AddSeconds(cfg.CacheTtlSeconds).AddTicks(1),
+                    (c.VolumeMetric?.ObservedUtc ?? c.ObservedUtc ?? cached.ObservedUtc).AddSeconds(cfg.CacheTtlSeconds).AddTicks(1)
+                }).Where(t => t > asOf).DefaultIfEmpty(DateTime.MaxValue).Min();
         }
-        optionsStatus = $"options NQZ6 verified: {selectedOptions.IncludedSeriesCount} series / {selectedOptions.Strikes.Count} strikes; " +
-            $"OI {contracts.Count(c => c.OpenInterest.HasValue)}/{contracts.Length}, volume {contracts.Count(c => c.TradedVolume.HasValue)}/{contracts.Length}; publication times unavailable";
+        if (analysisChanged || selectedOptionsPrice != price || selectedOptions == null)
+            selectedOptions = NqCandidateLevels.Core.OptionConcentration.Select(optionsAnalysis!, price, cfg);
+        selectedOptionsPrice = price;
+        if (cached.VerifiedContracts.Count == 0) { optionsStatus = cached.Status; return; }
+        var age = now - cached.ObservedUtc;
+        optionsStatus = $"{selectedOptions!.Status}; scanned {cached.ScannedSeriesIds.Count}/{cached.ScannedSeriesIds.Count + cached.UnqueriedSeriesIds.Count} series; " +
+            $"retrieved {cached.ObservedUtc:HH:mm:ss} UTC, age {Math.Max(0, age.TotalSeconds):F0}s / TTL {cfg.CacheTtlSeconds}s; " +
+            $"cached OI publication unknown; volume session unverified; {cached.HydrationStatus}; returned-universe coverage only";
+        if (age.TotalSeconds > cfg.CacheTtlSeconds) optionsStatus += "; STALE: option evidence inactive";
+        if (Math.Abs(price - cached.ScanCenter) > cached.ScanHalfWidth)
+            optionsStatus += "; price outside cached band: refresh queued at metadata throttle";
         if (cached.CompatibilityStatus.Length != 0) optionsStatus += "; " + cached.CompatibilityStatus;
     }
 
@@ -371,6 +441,7 @@ internal sealed class SourceDataAdapter : IDisposable
         sourceLifetime?.Cancel(); sourceLifetime?.Dispose(); sourceLifetime = null;
         Volatile.Write(ref optionsResult, null); Volatile.Write(ref profileResult, null);
         selectedOptions = null; selectedOptionsFrom = null; selectedOptionsPrice = null;
+        optionsAnalysis = null; analyzedSettings = null; lastRawSnapshot = null;
         profileSession = null; profileSessionEnd = null; nextOptionsUtc = default; nextProfileUtc = default;
         profileWasCorrected = false;
         Interlocked.Increment(ref profileRevision);
@@ -401,4 +472,12 @@ internal sealed class SourceDataAdapter : IDisposable
     }
 
     public void SetBias(ManualBias value) { bias = value; optionalDirty = true; }
+
+    public void UpdateScoringAndBias(ScoringSettings scoring, ManualBias value, OptionConcentrationSettings options)
+    {
+        scoringSettings = scoring;
+        concentrationSettings = options;
+        bias = value;
+        optionalDirty = true;
+    }
 }

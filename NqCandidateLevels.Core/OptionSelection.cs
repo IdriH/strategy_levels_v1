@@ -3,8 +3,18 @@ namespace NqCandidateLevels.Core;
 public enum OptionRight { Call, Put, Unknown }
 public sealed record OptionContract(string ContractId, string ConnectionId, string UnderlyingContractId, string SeriesId,
     DateTime ExpiryUtc, double Strike, OptionRight Right, double? OpenInterest = null, double? TradedVolume = null,
-    DateTime? ObservedUtc = null, DateTime? OpenInterestPublishedUtc = null);
-public sealed record OptionStrike(double Strike, IReadOnlyList<OptionContract> Contracts);
+    DateTime? ObservedUtc = null, DateTime? OpenInterestPublishedUtc = null)
+{
+    // Optional field-specific evidence. Legacy cached fields remain supported, but cached
+    // default zero and volume with an unverified session cannot establish concentration.
+    public OptionMetricObservation? OpenInterestMetric { get; init; }
+    public OptionMetricObservation? VolumeMetric { get; init; }
+}
+public sealed record OptionStrike(double Strike, IReadOnlyList<OptionContract> Contracts)
+{
+    public IReadOnlyList<OptionConcentration> Concentrations { get; init; } = Array.Empty<OptionConcentration>();
+    public OptionConcentration? StrongestConcentration { get; init; }
+}
 public sealed record OptionSelectionResult(string Status, int IncludedSeriesCount, IReadOnlyList<OptionStrike> Strikes);
 
 public static class OptionSelection

@@ -9,3 +9,4 @@ C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Rel
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Release\net10.0\refint\NqCandidateLevels.Core.dll
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Release\net10.0\NqCandidateLevels.Core.pdb
 C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Release\net10.0\ref\NqCandidateLevels.Core.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\NqCandidateLevels.Core\obj\Release\net10.0\NqCandidateLevels.Core.sourcelink.json

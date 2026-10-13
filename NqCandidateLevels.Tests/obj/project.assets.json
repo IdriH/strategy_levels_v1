@@ -27,16 +27,16 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\idrih\\.nuget\\packages\\": {}
+    "C:/Users/idrih/source/repos/candidate_levels_v1_1/.dotnet-cli\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Tests\\NqCandidateLevels.Tests.csproj",
+      "projectUniqueName": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Tests\\NqCandidateLevels.Tests.csproj",
       "projectName": "NqCandidateLevels.Tests",
-      "projectPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Tests\\NqCandidateLevels.Tests.csproj",
-      "packagesPath": "C:\\Users\\idrih\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Tests\\obj\\",
+      "projectPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Tests\\NqCandidateLevels.Tests.csproj",
+      "packagesPath": "C:/Users/idrih/source/repos/candidate_levels_v1_1/.dotnet-cli\\.nuget\\packages\\",
+      "outputPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Tests\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\idrih\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -54,8 +54,8 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {
-            "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj": {
-              "projectPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj"
+            "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj": {
+              "projectPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj"
             }
           }
         }

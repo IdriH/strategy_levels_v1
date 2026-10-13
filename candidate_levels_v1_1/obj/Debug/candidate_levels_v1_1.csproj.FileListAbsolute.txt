@@ -13,3 +13,7 @@ C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debu
 C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.pdb
 C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\ref\candidate_levels_v1_1.dll
 C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\bin\Debug\candidate_levels_v1_1.deps.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\.tmp\build-check\candidate_levels_v1_1.deps.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\.tmp\build-check\candidate_levels_v1_1.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\.tmp\build-check\candidate_levels_v1_1.pdb
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Debug\candidate_levels_v1_1.sourcelink.json

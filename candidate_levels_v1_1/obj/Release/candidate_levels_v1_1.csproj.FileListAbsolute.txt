@@ -13,3 +13,4 @@ C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Rele
 C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Release\candidate_levels_v1_1.pdb
 C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Release\ref\candidate_levels_v1_1.dll
 C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\bin\Release\candidate_levels_v1_1.deps.json
+C:\Users\idrih\source\repos\candidate_levels_v1_1\candidate_levels_v1_1\obj\Release\candidate_levels_v1_1.sourcelink.json

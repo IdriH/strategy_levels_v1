@@ -12,3 +12,4 @@ C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\De
 C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.pdb
 C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.genruntimeconfig.cache
 C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\ref\OptionalInspector.dll
+C:\Users\idrih\source\repos\candidate_levels_v1_1\tools\OptionalInspector\obj\Debug\net10.0\OptionalInspector.sourcelink.json

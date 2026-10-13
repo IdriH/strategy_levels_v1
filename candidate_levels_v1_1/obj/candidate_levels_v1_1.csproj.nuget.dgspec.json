@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj": {}
+    "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj": {}
   },
   "projects": {
-    "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj": {
+    "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj",
+        "projectUniqueName": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj",
         "projectName": "candidate_levels_v1_1",
-        "projectPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj",
-        "packagesPath": "C:\\Users\\idrih\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\obj\\",
+        "projectPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\candidate_levels_v1_1.csproj",
+        "packagesPath": "C:/Users/idrih/source/repos/candidate_levels_v1_1/.dotnet-cli\\.nuget\\packages\\",
+        "outputPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\candidate_levels_v1_1\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\idrih\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -29,8 +29,8 @@
             "framework": "net10.0-windows7.0",
             "targetAlias": "net10.0-windows",
             "projectReferences": {
-              "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj": {
-                "projectPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj"
+              "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj": {
+                "projectPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj"
               }
             }
           }
@@ -364,14 +364,14 @@
         }
       }
     },
-    "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj": {
+    "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj",
+        "projectUniqueName": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj",
         "projectName": "NqCandidateLevels.Core",
-        "projectPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj",
-        "packagesPath": "C:\\Users\\idrih\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\obj\\",
+        "projectPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\NqCandidateLevels.Core.csproj",
+        "packagesPath": "C:/Users/idrih/source/repos/candidate_levels_v1_1/.dotnet-cli\\.nuget\\packages\\",
+        "outputPath": "c:\\Users\\idrih\\source\\repos\\candidate_levels_v1_1\\NqCandidateLevels.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\idrih\\AppData\\Roaming\\NuGet\\NuGet.Config",

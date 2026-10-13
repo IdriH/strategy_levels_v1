@@ -200,14 +200,14 @@ public sealed class LevelEngine
             {
                 var interval = current.CashInterval.Value;
                 var first = coverage.Bars[0];
-                levels.Add(Level(current, LevelFamily.CurrentRth, "RTH open", first.Open, interval, first.StartUtc, AvailableAt(first.EndUtc, coverage),
+                levels.Add(Level(current, LevelFamily.CurrentRth, ReferenceKind.Open, "RTH open", first.Open, interval, first.StartUtc, AvailableAt(first.EndUtc, coverage),
                     UpdatedAt(first.EndUtc, coverage), false, true, coverage.Flags));
                 var volume = coverage.Bars.Sum(x => x.Volume);
                 if (double.IsFinite(volume) && volume > 0)
                 {
                     var price = coverage.Bars.Sum(x => ((x.High + x.Low + x.Close) / 3) * x.Volume) / volume;
                     var last = coverage.Bars[^1];
-                    levels.Add(Level(current, LevelFamily.CurrentRth, "VWAP proxy", price, interval, interval.StartUtc, AvailableAt(last.EndUtc, coverage),
+                    levels.Add(Level(current, LevelFamily.CurrentRth, ReferenceKind.VwapProxy, "VWAP proxy", price, interval, interval.StartUtc, AvailableAt(last.EndUtc, coverage),
                         UpdatedAt(last.EndUtc, coverage), cutoff < interval.EndUtc, cutoff >= interval.EndUtc, coverage.Flags | QualityFlags.BarVwapProxy));
                     status["VWAP"] = $"Bar proxy through {last.EndUtc:O}; volume {volume:G}";
                 }
@@ -260,7 +260,7 @@ public sealed class LevelEngine
         if (!previous)
         {
             var first = bars[0];
-            levels.Add(Level(synthetic, LevelFamily.CurrentWeek, "Week open", first.Open, interval, first.StartUtc, AvailableAt(first.EndUtc, coverage),
+            levels.Add(Level(synthetic, LevelFamily.CurrentWeek, ReferenceKind.Open, "Week open", first.Open, interval, first.StartUtc, AvailableAt(first.EndUtc, coverage),
                 UpdatedAt(first.EndUtc, coverage), false, true, coverage.Flags));
         }
         status[name] = $"Complete coverage of {coverageParts.Length} known exchange sessions; week of {weekStart}";
@@ -290,9 +290,9 @@ public sealed class LevelEngine
                 .Where(x => x.HasValue).DefaultIfEmpty(null).Max();
             var knownAt = correction.HasValue && correction > bars[end].EndUtc ? correction.Value : bars[end].EndUtc;
             var quality = QualityFlags.Complete | (correction.HasValue ? QualityFlags.Corrected : QualityFlags.None);
-            if (high) highs.Add(Level(schedule, LevelFamily.Structure, "Confirmed swing high", pivot.High, interval, pivot.StartUtc,
+            if (high) highs.Add(Level(schedule, LevelFamily.Structure, ReferenceKind.SwingHigh, "Confirmed swing high", pivot.High, interval, pivot.StartUtc,
                 knownAt, knownAt, false, true, quality, $":{pivot.StartUtc.Ticks}"));
-            if (low) lows.Add(Level(schedule, LevelFamily.Structure, "Confirmed swing low", pivot.Low, interval, pivot.StartUtc,
+            if (low) lows.Add(Level(schedule, LevelFamily.Structure, ReferenceKind.SwingLow, "Confirmed swing low", pivot.Low, interval, pivot.StartUtc,
                 knownAt, knownAt, false, true, quality, $":{pivot.StartUtc.Ticks}"));
         }
         levels.AddRange(highs.TakeLast(settings.SwingCountPerSide));
@@ -356,7 +356,7 @@ public sealed class LevelEngine
     {
         AddExtremes(levels, schedule, coverage, family, highLabel, lowLabel, interval, false, frozen);
         var last = coverage.Bars[^1];
-        levels.Add(Level(schedule, family, closeLabel, last.Close, interval, last.StartUtc, AvailableAt(interval.EndUtc, coverage),
+        levels.Add(Level(schedule, family, ReferenceKind.Close, closeLabel, last.Close, interval, last.StartUtc, AvailableAt(interval.EndUtc, coverage),
             UpdatedAt(last.EndUtc, coverage), false, frozen, coverage.Flags));
     }
 
@@ -368,17 +368,25 @@ public sealed class LevelEngine
         var lastUpdate = UpdatedAt(coverage.Bars[^1].EndUtc, coverage);
         // A completed aggregate is only available after its entire source interval; a developing aggregate is known at its latest completed bar.
         var knownAt = AvailableAt(frozen ? interval.EndUtc : coverage.Bars[^1].EndUtc, coverage);
-        levels.Add(Level(schedule, family, highLabel, high.High, interval, high.StartUtc, knownAt, lastUpdate, developing, frozen, coverage.Flags));
-        levels.Add(Level(schedule, family, lowLabel, low.Low, interval, low.StartUtc, knownAt, lastUpdate, developing, frozen, coverage.Flags));
+        levels.Add(Level(schedule, family, ReferenceKind.High, highLabel, high.High, interval, high.StartUtc, knownAt, lastUpdate, developing, frozen, coverage.Flags));
+        levels.Add(Level(schedule, family, ReferenceKind.Low, lowLabel, low.Low, interval, low.StartUtc, knownAt, lastUpdate, developing, frozen, coverage.Flags));
     }
 
-    private CandidateLevel Level(SessionSchedule schedule, LevelFamily family, string label, double price, UtcInterval interval,
+    private CandidateLevel Level(SessionSchedule schedule, LevelFamily family, ReferenceKind kind, string label, double price, UtcInterval interval,
         DateTime origin, DateTime knownAt, DateTime lastUpdate, bool developing, bool frozen, QualityFlags quality, string idSuffix = "") => new()
     {
-        Id = $"{family}:{schedule.TradingDate:yyyyMMdd}:{label}{idSuffix}", Family = family, Label = label, RawPrice = price,
+        Id = $"{family}:{schedule.TradingDate:yyyyMMdd}:{kind}{idSuffix}", Family = family, Kind = kind, Label = label, RawPrice = price,
+        OriginatingEventId = $"{source.ConnectionId}:{source.ContractId}:M1:{origin.Ticks}:{EventKind(kind)}:{SnapshotBuilder.PriceTick(price, source.TickSize)}",
         TradingDate = schedule.TradingDate, IntervalStartUtc = interval.StartUtc, IntervalEndUtc = interval.EndUtc,
         OriginUtc = origin, KnownAtUtc = knownAt, LastUpdateUtc = lastUpdate, Developing = developing, Frozen = frozen,
         Quality = quality
+    };
+
+    private static ReferenceKind EventKind(ReferenceKind kind) => kind switch
+    {
+        ReferenceKind.SwingHigh => ReferenceKind.High,
+        ReferenceKind.SwingLow => ReferenceKind.Low,
+        _ => kind
     };
 
     private DateTime? CorrectionAvailability(SourceBar bar) =>

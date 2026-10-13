@@ -24,7 +24,11 @@ var tests = new (string Name, Action Run)[]
     ("Strict source metadata accepts exact NQZ6 only", SourceRules),
     ("Real profile coverage, ties, plateaus and traded boundaries", Profiles),
     ("Native profile conservation and independent coverage", ProfileCompatibilityChecks.Run),
-    ("Host display context cannot affect source engine", HostIndependence)
+    ("Host display context cannot affect source engine", HostIndependence),
+    ("Deterministic importance, bounded zones, availability and profile prominence", ScoringChecks.Run),
+    ("Option concentration ranking, modes, coverage, clocks and bounded universe", OptionConcentrationChecks.Run),
+    ("Bounded options metric collection, partial data and subscription cleanup", OptionMetricHydrationChecks.Run),
+    ("Option symbol delivery, field validity and owned handler cleanup", OptionSymbolMetricsChecks.Run)
 };
 var failed = 0;
 foreach (var test in tests)
